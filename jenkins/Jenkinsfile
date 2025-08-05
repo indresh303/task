@@ -2,7 +2,8 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'your_dockerhub_username/flaskapp'
+    IMAGE_NAME = 'bindreshbabu/task-webapp
+'
   }
 
   stages {
