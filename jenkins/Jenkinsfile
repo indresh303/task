@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "indresh303/task-webapp"
+        IMAGE_NAME = "bindreshbabu/task-webapp"
     }
 
     stages {
