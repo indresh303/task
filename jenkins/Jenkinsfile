@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Clone Repo') {
             steps {
-                git credentialsId: 'github-creds', url: 'https://github.com/indresh303/task.git'
+                git branch: 'main', credentialsId: 'github-creds', url: 'https://github.com/indresh303/task.git'
             }
         }
 
