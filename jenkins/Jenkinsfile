@@ -1,53 +1,42 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    IMAGE_NAME = 'bindreshbabu/task-webapp
-'
-  }
-
-  stages {
-    stage('Clone') {
-      steps {
-        git 'https://github.com/indresh303/task.git'
-      }
+    environment {
+        IMAGE_NAME = "indresh303/task-webapp"
     }
 
-    stage('Build Docker Image') {
-      steps {
-        script {
-          docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+    stages {
+        stage('Clone Repo') {
+            steps {
+                git credentialsId: 'github-creds', url: 'https://github.com/indresh303/task.git'
+            }
         }
-      }
-    }
 
-    stage('Push to DockerHub') {
-      steps {
-        script {
-          docker.withRegistry('', 'dockerhub-credentials-id') {
-            docker.image("${IMAGE_NAME}:${BUILD_NUMBER}").push("latest")
-          }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME .'
+            }
         }
-      }
-    }
 
-    stage('Deploy to Kubernetes') {
-      steps {
-        sh '''
-        kubectl apply -f k8s/namespace.yaml
-        kubectl apply -f k8s/deployment.yaml
-        kubectl apply -f k8s/service.yaml
-        '''
-      }
-    }
-  }
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $IMAGE_NAME
+                    '''
+                }
+            }
+        }
 
-  post {
-    success {
-      echo "Successfully Deployed!"
+        stage('Deploy to AKS') {
+            steps {
+                sh '''
+                    az aks get-credentials --resource-group YOUR_RG --name YOUR_AKS
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+                '''
+            }
+        }
     }
-    failure {
-      echo "Build or Deploy Failed"
-    }
-  }
 }
