@@ -1,0 +1,52 @@
+pipeline {
+  agent any
+
+  environment {
+    IMAGE_NAME = 'your_dockerhub_username/flaskapp'
+  }
+
+  stages {
+    stage('Clone') {
+      steps {
+        git 'https://github.com/your/repo.git'
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        script {
+          docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+        }
+      }
+    }
+
+    stage('Push to DockerHub') {
+      steps {
+        script {
+          docker.withRegistry('', 'dockerhub-credentials-id') {
+            docker.image("${IMAGE_NAME}:${BUILD_NUMBER}").push("latest")
+          }
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        sh '''
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+        '''
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Successfully Deployed!"
+    }
+    failure {
+      echo "Build or Deploy Failed"
+    }
+  }
+}
