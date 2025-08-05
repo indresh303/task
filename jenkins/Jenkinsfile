@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "bindreshbabu/task-webapp"
+        IMAGE_NAME = "indresh303/task-webapp"
     }
 
     stages {
@@ -14,37 +14,34 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t indresh303/task-webapp -f app/Dockerfile .'
-
+                sh 'docker build -t $IMAGE_NAME -f app/Dockerfile .'
             }
         }
 
         stage('Push to DockerHub') {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-            sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push $IMAGE_NAME
-            '''
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $IMAGE_NAME
+                    '''
+                }
+            }
         }
-    }
-}
 
-  stages {
-    stage('Login to Azure') {
-      steps {
-        withCredentials([string(credentialsId: 'AZURE_CREDENTIALS_JSON', variable: 'AZURE_CREDENTIALS')]) {
-          sh '''
-            echo "$AZURE_CREDENTIALS" > azure-creds.json
-            az login --service-principal --username $(jq -r .clientId azure-creds.json) \
-                     --password $(jq -r .clientSecret azure-creds.json) \
-                     --tenant $(jq -r .tenantId azure-creds.json)
-          '''
+        stage('Login to Azure') {
+            steps {
+                withCredentials([string(credentialsId: 'AZURE_CREDENTIALS_JSON', variable: 'AZURE_CREDENTIALS')]) {
+                    sh '''
+                        echo "$AZURE_CREDENTIALS" > azure-creds.json
+                        az login --service-principal \
+                            --username $(jq -r .clientId azure-creds.json) \
+                            --password $(jq -r .clientSecret azure-creds.json) \
+                            --tenant $(jq -r .tenantId azure-creds.json)
+                    '''
+                }
+            }
         }
-      }
-    
-
-
 
         stage('Deploy to AKS') {
             steps {
