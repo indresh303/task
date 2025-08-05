@@ -30,6 +30,21 @@ pipeline {
     }
 }
 
+  stages {
+    stage('Login to Azure') {
+      steps {
+        withCredentials([string(credentialsId: 'AZURE_CREDENTIALS_JSON', variable: 'AZURE_CREDENTIALS')]) {
+          sh '''
+            echo "$AZURE_CREDENTIALS" > azure-creds.json
+            az login --service-principal --username $(jq -r .clientId azure-creds.json) \
+                     --password $(jq -r .clientSecret azure-creds.json) \
+                     --tenant $(jq -r .tenantId azure-creds.json)
+          '''
+        }
+      }
+    
+
+
 
         stage('Deploy to AKS') {
             steps {
