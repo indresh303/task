@@ -18,3 +18,8 @@ spec:
         image: bindreshbabu/task-webapp:latest
         ports:
         - containerPort: 5000
+        env:
+        - name: FLASK_APP
+          value: "app.py"  
+        - name: FLASK_RUN_HOST
+          value: "0.0.0.0"
