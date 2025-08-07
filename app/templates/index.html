@@ -5,19 +5,39 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="navbar">
+        <a href="/">Home</a>
+        {% if 'user' in session %}
+            <span>Welcome, {{ session['user'] }}</span>
+            <a href="/logout">Logout</a>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/signup">Signup</a>
+        {% endif %}
+    </div>
+
     <div class="container">
         <h1>Welcome to the Shoe Store!</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
         <div class="product">
             <img src="https://via.placeholder.com/150" alt="Shoe Image">
             <h2>Sporty Sneakers</h2>
             <p>Price: $49.99</p>
-            <button>Buy Now</button>
+            <button onclick="alert('Thank you for purchasing!')">Buy Now</button>
         </div>
         <div class="product">
             <img src="https://via.placeholder.com/150" alt="Shoe Image">
             <h2>Elegant Loafers</h2>
             <p>Price: $79.99</p>
-            <button>Buy Now</button>
+            <button onclick="alert('Thank you for purchasing!')">Buy Now</button>
         </div>
     </div>
 </body>
