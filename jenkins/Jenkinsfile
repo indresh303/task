@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "bindreshbabu/task-webapp"
+        DOCKER_REPO = "bindreshbabu/task-webapp"
+        IMAGE_TAG = "v${BUILD_NUMBER}"  // unique image tag per build
+        FULL_IMAGE = "${DOCKER_REPO}:${IMAGE_TAG}"
     }
 
     stages {
@@ -14,7 +16,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME -f app/Dockerfile .'
+                sh 'docker build -t $FULL_IMAGE -f app/Dockerfile .'
             }
         }
 
@@ -23,7 +25,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $IMAGE_NAME
+                        docker push $FULL_IMAGE
                     '''
                 }
             }
@@ -47,8 +49,12 @@ pipeline {
             steps {
                 sh '''
                     az aks get-credentials --resource-group indresh --name task
+
+                    # Replace image in deployment.yaml
+                    sed "s|image:.*|image: ${FULL_IMAGE}|" k8s/deployment.yaml > k8s/deployment-updated.yaml
+
                     kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/deployment-updated.yaml
                     kubectl apply -f k8s/service.yaml
                 '''
             }
