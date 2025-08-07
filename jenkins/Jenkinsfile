@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_REPO = "bindreshbabu/task-webapp"
-        IMAGE_TAG = "v${BUILD_NUMBER}"  // unique image tag per build
+        IMAGE_TAG = "v${BUILD_NUMBER}"
         FULL_IMAGE = "${DOCKER_REPO}:${IMAGE_TAG}"
     }
 
@@ -16,8 +16,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build --no-cache -t $FULL_IMAGE -f app/Dockerfile .'
-
+                sh 'docker build --no-cache -t ${FULL_IMAGE} -f app/Dockerfile .'
             }
         }
 
@@ -26,7 +25,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $FULL_IMAGE
+                        docker push ${FULL_IMAGE}
                     '''
                 }
             }
@@ -36,11 +35,14 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'AZURE_CREDENTIALS_JSON', variable: 'AZURE_CREDENTIALS')]) {
                     sh '''
-                        echo "$AZURE_CREDENTIALS" > azure-creds.json
+                        CLIENT_ID=$(echo "$AZURE_CREDENTIALS" | jq -r .clientId)
+                        CLIENT_SECRET=$(echo "$AZURE_CREDENTIALS" | jq -r .clientSecret)
+                        TENANT_ID=$(echo "$AZURE_CREDENTIALS" | jq -r .tenantId)
+
                         az login --service-principal \
-                            --username $(jq -r .clientId azure-creds.json) \
-                            --password $(jq -r .clientSecret azure-creds.json) \
-                            --tenant $(jq -r .tenantId azure-creds.json)
+                          --username "$CLIENT_ID" \
+                          --password "$CLIENT_SECRET" \
+                          --tenant "$TENANT_ID"
                     '''
                 }
             }
@@ -49,14 +51,17 @@ pipeline {
         stage('Deploy to AKS') {
             steps {
                 script {
-                    sh """
+                    sh '''
                         az aks get-credentials --resource-group indresh --name task
-                        sed 's|__IMAGE__|${FULL_IMAGE}|' k8s/deployment.yaml > k8s/deployment-updated.yaml
+
+                        sed "s|__IMAGE__|${FULL_IMAGE}|" k8s/deployment.yaml > k8s/deployment-updated.yaml
+
                         kubectl apply -f k8s/namespace.yaml
                         kubectl apply -f k8s/deployment-updated.yaml
                         kubectl apply -f k8s/service.yaml
+
                         kubectl rollout restart deployment flask-deployment -n flask-ns
-                    """
+                    '''
                 }
             }
         }
