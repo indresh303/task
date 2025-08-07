@@ -45,19 +45,19 @@ pipeline {
             }
         }
 
-        stage('Deploy to AKS') {
-            steps {
-                sh '''
-                    az aks get-credentials --resource-group indresh --name task
-
-                    # Replace image in deployment.yaml
-                    sed "s|image:.*|image: ${FULL_IMAGE}|" k8s/deployment.yaml > k8s/deployment-updated.yaml
-
-                    kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/deployment-updated.yaml
-                    kubectl apply -f k8s/service.yaml
-                '''
-            }
+       stage('Deploy to AKS') {
+    steps {
+        script {
+            def version = "v${BUILD_NUMBER}"
+            def fullImage = "${IMAGE_NAME}:${version}"
+            sh """
+                sed 's|__IMAGE__|${fullImage}|' k8s/deployment.yaml > k8s/deployment-updated.yaml
+                az aks get-credentials --resource-group indresh --name task
+                kubectl apply -f k8s/namespace.yaml
+                kubectl apply -f k8s/deployment-updated.yaml
+                kubectl apply -f k8s/service.yaml
+                kubectl rollout restart deployment flask-deployment -n flask-ns
+            """
         }
     }
 }
