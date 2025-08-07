@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
       - name: flask-container
-        image: bindreshbabu/task-webapp:latest
+        image: __IMAGE__  # <-- Jenkins will replace this with the actual image
+        imagePullPolicy: Always  # Always pull the new image
         ports:
         - containerPort: 5000
         env:
